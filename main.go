@@ -2,127 +2,75 @@ package main
 
 import (
 	"fmt"
-	"strings"
+	"log"
+	"os"
 
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
-	"fyne.io/fyne/v2/widget"
+	"gioui.org/app"
+	"gioui.org/font/gofont"
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/text"
+	"gioui.org/unit"
+	"gioui.org/widget/material"
 )
 
-func displayError(err error, window fyne.Window) {
-	errorDiaglog := dialog.NewError(err, window)
-	errorDiaglog.Show()
-}
-
-func initialBytes(uri fyne.URI) []byte {
-	b := []byte(strings.Replace(uri.Extension(), uri.Name(), "", 1))
-	b = append(b, '\n')
-	b = append(b, 0)
-	return b
-}
+var (
+	//TODO: find a way to "cache" the last folder
+	folderPath string
+	files      []string
+)
 
 func main() {
-	myApp := app.New()
-	myWindow := myApp.NewWindow("Box Layout")
 
-	defaultPath := "C:/Users/user/Documents/examplefolder"
-	fileLabel := widget.NewRichTextFromMarkdown(fmt.Sprintf("## %s", defaultPath))
-	//TODO: "remember" last open URI
-	var filePath fyne.ListableURI
-
-	chooseFolderDialog := dialog.NewFolderOpen(
-		func(lu fyne.ListableURI, err error) {
-			if err != nil {
-				displayError(err, myWindow)
-				return
-			}
-			if lu == nil {
-				return
-			}
-			fileLabel.ParseMarkdown(fmt.Sprintf("## %s", lu.Path()))
-			filePath = lu
-			childs, err := filePath.List()
-			if err != nil {
-				displayError(err, myWindow)
-				fmt.Printf("failed to list files: %#v\n", err)
-				return
-			}
-			for _, uri := range childs {
-				fmt.Printf("files: %#v\n", uri)
-			}
-		},
-		myWindow,
-	)
-	chooseFolderButton := widget.NewButton("Choose folder", func() {
-		chooseFolderDialog.Show()
-	})
-	content := container.New(
-		layout.NewHBoxLayout(),
-		layout.NewSpacer(),
-		chooseFolderButton,
-		fileLabel,
-		layout.NewSpacer(),
-	)
-
-	createCounterDialog := dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
-		if err != nil {
-			displayError(err, myWindow)
-			fmt.Printf("failed to save file %#v\n", err)
-			return
+	go func() {
+		w := new(app.Window)
+		w.Option(app.Size(unit.Dp(800), unit.Dp(700)))
+		if err := loop(w); err != nil {
+			log.Fatal(err)
 		}
-		if writer == nil {
-			return
+		os.Exit(0)
+	}()
+	app.Main()
+}
+
+func loop(window *app.Window) error {
+	theme := material.NewTheme()
+	theme.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
+	var ops op.Ops
+	var list layout.List
+
+	for {
+		event := window.Event()
+		switch eventType := event.(type) {
+		case app.DestroyEvent:
+			return eventType.Err
+		case app.FrameEvent:
+			context := app.NewContext(&ops, eventType)
+			xmargin := unit.Dp(context.Constraints.Max.X) / 5
+			ymargin := unit.Dp(context.Constraints.Max.Y) / 10
+			list = layout.List{Axis: layout.Vertical}
+
+			margins := layout.Inset{
+				Left:   xmargin,
+				Right:  xmargin,
+				Top:    ymargin,
+				Bottom: ymargin,
+			}
+
+			if folderPath == "" {
+				fmt.Printf("no folder\n")
+			}
+
+			margins.Layout(context,
+				func(context layout.Context) layout.Dimensions {
+					return list.Layout(context, len(files)+10, func(context layout.Context, index int) layout.Dimensions {
+						textLabel := material.Label(theme, unit.Sp(16), "Placeholder")
+						textLabel.Alignment = text.Middle
+						return textLabel.Layout(context)
+					})
+				},
+			)
+			eventType.Frame(context.Ops)
 		}
-		writer.Write(initialBytes(writer.URI()))
-	}, myWindow)
-	createCounterButton := widget.NewButton("Create new counter", func() {
-		createCounterDialog.SetLocation(filePath)
-		createCounterDialog.SetFileName("counter.txt")
-		createCounterDialog.Show()
-	})
-	centered := container.New(
-		layout.NewHBoxLayout(),
-		layout.NewSpacer(),
-		createCounterButton,
-		layout.NewSpacer(),
-	)
-
-	countersContainer := container.NewVScroll(
-		widget.NewCard(
-			"counterName", "",
-			widget.NewEntry(),
-		),
-	)
-	buttonContainer := container.New(
-		layout.NewHBoxLayout(),
-		layout.NewSpacer(),
-		countersContainer,
-		container.New(
-			layout.NewHBoxLayout(),
-			layout.NewSpacer(),
-		),
-		layout.NewSpacer(),
-	)
-
-	mainContainer := container.New(
-		layout.NewVBoxLayout(),
-		layout.NewSpacer(),
-		content,
-		centered,
-		layout.NewSpacer(),
-		buttonContainer,
-		layout.NewSpacer(),
-		layout.NewSpacer(),
-		layout.NewSpacer(),
-		layout.NewSpacer(),
-		layout.NewSpacer(),
-		layout.NewSpacer(),
-		layout.NewSpacer(),
-	)
-
-	myWindow.SetContent(mainContainer)
-	myWindow.ShowAndRun()
+	}
 }
