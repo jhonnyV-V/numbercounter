@@ -11,6 +11,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/text"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
 
@@ -38,6 +39,7 @@ func loop(window *app.Window) error {
 	theme.Shaper = text.NewShaper(text.WithCollection(gofont.Collection()))
 	var ops op.Ops
 	var list layout.List
+	var createCounterButton widget.Clickable
 
 	for {
 		event := window.Event()
@@ -48,9 +50,11 @@ func loop(window *app.Window) error {
 			context := app.NewContext(&ops, eventType)
 			xmargin := unit.Dp(context.Constraints.Max.X) / 5
 			ymargin := unit.Dp(context.Constraints.Max.Y) / 10
-			list = layout.List{Axis: layout.Vertical}
+			list = layout.List{
+				Axis: layout.Vertical,
+			}
 
-			margins := layout.Inset{
+			layoutMargin := layout.Inset{
 				Left:   xmargin,
 				Right:  xmargin,
 				Top:    ymargin,
@@ -61,13 +65,33 @@ func loop(window *app.Window) error {
 				fmt.Printf("no folder\n")
 			}
 
-			margins.Layout(context,
+			layoutMargin.Layout(context,
 				func(context layout.Context) layout.Dimensions {
-					return list.Layout(context, len(files)+10, func(context layout.Context, index int) layout.Dimensions {
-						textLabel := material.Label(theme, unit.Sp(16), "Placeholder")
-						textLabel.Alignment = text.Middle
-						return textLabel.Layout(context)
-					})
+					return layout.Flex{
+						Axis:      layout.Vertical,
+						Alignment: layout.Middle,
+					}.Layout(context,
+						layout.Rigid(func(context layout.Context) layout.Dimensions {
+							button := material.Button(theme, &createCounterButton, "Create counter")
+
+							return button.Layout(context)
+						}),
+						layout.Rigid(layout.Spacer{Height: unit.Dp(30)}.Layout),
+						layout.Rigid(func(context layout.Context) layout.Dimensions {
+							return list.Layout(context, len(files)+10, func(context layout.Context, index int) layout.Dimensions {
+								textLabel := material.Label(theme, unit.Sp(16), "Placeholder")
+								textLabel.Alignment = text.Middle
+								ymargin := unit.Dp(15)
+								return layout.Inset{
+									Top:    ymargin,
+									Bottom: ymargin,
+								}.Layout(
+									context,
+									textLabel.Layout,
+								)
+							})
+						}),
+					)
 				},
 			)
 			eventType.Frame(context.Ops)
