@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"mime"
 	"os"
+	"strings"
 
 	"gioui.org/app"
 	"gioui.org/font/gofont"
@@ -15,13 +17,53 @@ import (
 	"gioui.org/widget/material"
 )
 
+type Counter struct {
+	value           int
+	fileName        *string
+	incrementButton *widget.Clickable
+	decrementButton *widget.Clickable
+}
+
 var (
 	//TODO: find a way to "cache" the last folder
-	folderPath string
+	//TODO: remove this default value
+	folderPath string = "/home/jhonny/Documents/counters-DELETEME"
 	files      []string
+	counters   []*Counter
 )
 
 func main() {
+
+	listOfFiles, err := os.ReadDir(folderPath)
+	if err != nil {
+		fmt.Printf("listOfFiles ERR %#v\n", err.Error())
+	}
+	fmt.Printf("listOfFiles %#v\n", listOfFiles)
+	for _, v := range listOfFiles {
+		if v.IsDir() {
+			continue
+		}
+		name := v.Name()
+		fmt.Printf("name %s\n", name)
+
+		splitName := strings.Split(name, ".")
+		fmt.Printf("splitName %#v\n", splitName)
+
+		extension := mime.TypeByExtension("." + splitName[len(splitName)-1])
+		fmt.Printf("extension %s\n", extension)
+
+		if !strings.Contains(extension, "text/") {
+			fmt.Printf("does not contain text/\n")
+			continue
+		}
+
+		counters = append(counters, &Counter{
+			value:           0,
+			fileName:        &name,
+			incrementButton: new(widget.Clickable),
+			decrementButton: new(widget.Clickable),
+		})
+	}
 
 	go func() {
 		w := new(app.Window)
@@ -78,16 +120,17 @@ func loop(window *app.Window) error {
 						}),
 						layout.Rigid(layout.Spacer{Height: unit.Dp(30)}.Layout),
 						layout.Rigid(func(context layout.Context) layout.Dimensions {
-							return list.Layout(context, len(files)+10, func(context layout.Context, index int) layout.Dimensions {
-								textLabel := material.Label(theme, unit.Sp(16), "Placeholder")
-								textLabel.Alignment = text.Middle
+							return list.Layout(context, len(counters), func(context layout.Context, index int) layout.Dimensions {
 								ymargin := unit.Dp(15)
 								return layout.Inset{
 									Top:    ymargin,
 									Bottom: ymargin,
 								}.Layout(
 									context,
-									textLabel.Layout,
+									// textLabel.Layout,
+									func(context layout.Context) layout.Dimensions {
+										return getCounter(context, index, theme)
+									},
 								)
 							})
 						}),
@@ -97,4 +140,33 @@ func loop(window *app.Window) error {
 			eventType.Frame(context.Ops)
 		}
 	}
+}
+
+func getCounter(context layout.Context, index int, theme *material.Theme) layout.Dimensions {
+	counter := counters[index]
+
+	return layout.Flex{
+		Axis:      layout.Horizontal,
+		Alignment: layout.Middle,
+	}.Layout(context,
+		layout.Rigid(func(context layout.Context) layout.Dimensions {
+			textLabel := material.Label(theme, unit.Sp(24), "0")
+			textLabel.Alignment = text.Middle
+			return textLabel.Layout(context)
+		}),
+		layout.Rigid(func(context layout.Context) layout.Dimensions {
+			return layout.Flex{
+				Axis: layout.Vertical,
+			}.Layout(context,
+				layout.Rigid(func(context layout.Context) layout.Dimensions {
+					button := material.Button(theme, counter.incrementButton, "+")
+					return button.Layout(context)
+				}),
+				layout.Rigid(func(context layout.Context) layout.Dimensions {
+					button := material.Button(theme, counter.incrementButton, "-")
+					return button.Layout(context)
+				}),
+			)
+		}),
+	)
 }
