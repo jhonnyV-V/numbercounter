@@ -15,6 +15,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"github.com/jhonnyV-V/gio-x/explorer"
 )
 
 type Counter struct {
@@ -27,13 +28,12 @@ type Counter struct {
 var (
 	//TODO: find a way to "cache" the last folder
 	//TODO: remove this default value
-	folderPath string = "/home/jhonny/Documents/counters-DELETEME"
+	folderPath string = ""
 	files      []string
 	counters   []*Counter
 )
 
 func main() {
-
 	listOfFiles, err := os.ReadDir(folderPath)
 	if err != nil {
 		fmt.Printf("listOfFiles ERR %#v\n", err.Error())
@@ -82,6 +82,7 @@ func loop(window *app.Window) error {
 	var ops op.Ops
 	var list layout.List
 	var createCounterButton widget.Clickable
+	var selectFolderButton widget.Clickable
 
 	for {
 		event := window.Event()
@@ -103,8 +104,14 @@ func loop(window *app.Window) error {
 				Bottom: ymargin,
 			}
 
-			if folderPath == "" {
-				fmt.Printf("no folder\n")
+			if selectFolderButton.Clicked(context) {
+				ex := explorer.NewExplorer(window)
+				selectedFolder, err := ex.ChooseFolder(nil)
+				if err != nil {
+					fmt.Printf("failed to open folder: %s \n", err)
+				} else {
+					folderPath = selectedFolder
+				}
 			}
 
 			layoutMargin.Layout(context,
@@ -114,6 +121,31 @@ func loop(window *app.Window) error {
 						Alignment: layout.Middle,
 					}.Layout(context,
 						layout.Rigid(func(context layout.Context) layout.Dimensions {
+							button := material.Button(theme, &selectFolderButton, "Select a folder")
+							if folderPath == "" {
+								return  button.Layout(context)
+							}
+
+							label := material.Label(
+								theme,
+								unit.Sp(20),
+								fmt.Sprintf("Current Directory: %s", folderPath),
+							)
+
+							label.WrapPolicy = text.WrapHeuristically
+
+							return layout.Flex{
+								Axis: layout.Horizontal,
+							}.Layout(context,
+								layout.Rigid(button.Layout),
+								layout.Rigid(label.Layout),
+							)
+						}),
+						layout.Rigid(layout.Spacer{Height: unit.Dp(30)}.Layout),
+						layout.Rigid(func(context layout.Context) layout.Dimensions {
+							if folderPath == "" {
+								context.Disabled()
+							}
 							button := material.Button(theme, &createCounterButton, "Create counter")
 
 							return button.Layout(context)
@@ -127,7 +159,6 @@ func loop(window *app.Window) error {
 									Bottom: ymargin,
 								}.Layout(
 									context,
-									// textLabel.Layout,
 									func(context layout.Context) layout.Dimensions {
 										return getCounter(context, index, theme)
 									},
@@ -157,6 +188,7 @@ func getCounter(context layout.Context, index int, theme *material.Theme) layout
 		layout.Rigid(func(context layout.Context) layout.Dimensions {
 			return layout.Flex{
 				Axis: layout.Vertical,
+				Alignment: layout.Middle,
 			}.Layout(context,
 				layout.Rigid(func(context layout.Context) layout.Dimensions {
 					button := material.Button(theme, counter.incrementButton, "+")
