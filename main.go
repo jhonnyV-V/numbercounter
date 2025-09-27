@@ -5,6 +5,7 @@ import (
 	"log"
 	"mime"
 	"os"
+	"strconv"
 	"strings"
 
 	"gioui.org/app"
@@ -34,11 +35,24 @@ var (
 )
 
 func main() {
+	go func() {
+		w := new(app.Window)
+		w.Option(app.Size(unit.Dp(800), unit.Dp(700)))
+		if err := loop(w); err != nil {
+			log.Fatal(err)
+		}
+		os.Exit(0)
+	}()
+	app.Main()
+}
+
+func readFolderForCounters() {
 	listOfFiles, err := os.ReadDir(folderPath)
 	if err != nil {
 		fmt.Printf("listOfFiles ERR %#v\n", err.Error())
 	}
 	fmt.Printf("listOfFiles %#v\n", listOfFiles)
+	counters = []*Counter{}
 	for _, v := range listOfFiles {
 		if v.IsDir() {
 			continue
@@ -57,23 +71,23 @@ func main() {
 			continue
 		}
 
+		data, err := os.ReadFile(fmt.Sprintf("%s/%s", folderPath, name))
+
+		if err != nil {
+			fmt.Printf("failed to read file %s %#v\n", name, err)
+		}
+		value, err := strconv.Atoi(strings.TrimSpace(string(data)))
+		if err != nil {
+			fmt.Printf("failed to read value %s %#v\n", string(data), err)
+		}
+
 		counters = append(counters, &Counter{
-			value:           0,
+			value:           value,
 			fileName:        &name,
 			incrementButton: new(widget.Clickable),
 			decrementButton: new(widget.Clickable),
 		})
 	}
-
-	go func() {
-		w := new(app.Window)
-		w.Option(app.Size(unit.Dp(800), unit.Dp(700)))
-		if err := loop(w); err != nil {
-			log.Fatal(err)
-		}
-		os.Exit(0)
-	}()
-	app.Main()
 }
 
 func loop(window *app.Window) error {
@@ -111,7 +125,30 @@ func loop(window *app.Window) error {
 					fmt.Printf("failed to open folder: %s \n", err)
 				} else {
 					folderPath = selectedFolder
+					readFolderForCounters()
 				}
+			}
+
+			if createCounterButton.Clicked(context) && folderPath != "" {
+				ex := explorer.NewExplorer(window)
+				//modify to take the folderPath as a default directory
+				//also return filename or path
+				w, err := ex.CreateFile("counter.txt")
+				if err != nil {
+					fmt.Printf("Failed to create file %#v\n", err)
+				}
+
+				_, err = w.Write([]byte{'0'})
+				if err != nil {
+					fmt.Printf("Failed to write to file %#v\n", err)
+				}
+
+				err = w.Close()
+				if err != nil {
+					fmt.Printf("Failed to close file %#v\n", err)
+				}
+
+				readFolderForCounters()
 			}
 
 			layoutMargin.Layout(context,
@@ -123,7 +160,7 @@ func loop(window *app.Window) error {
 						layout.Rigid(func(context layout.Context) layout.Dimensions {
 							button := material.Button(theme, &selectFolderButton, "Select a folder")
 							if folderPath == "" {
-								return  button.Layout(context)
+								return button.Layout(context)
 							}
 
 							label := material.Label(
@@ -144,7 +181,7 @@ func loop(window *app.Window) error {
 						layout.Rigid(layout.Spacer{Height: unit.Dp(30)}.Layout),
 						layout.Rigid(func(context layout.Context) layout.Dimensions {
 							if folderPath == "" {
-								context.Disabled()
+								return layout.Spacer{}.Layout(context)
 							}
 							button := material.Button(theme, &createCounterButton, "Create counter")
 
@@ -181,13 +218,16 @@ func getCounter(context layout.Context, index int, theme *material.Theme) layout
 		Alignment: layout.Middle,
 	}.Layout(context,
 		layout.Rigid(func(context layout.Context) layout.Dimensions {
-			textLabel := material.Label(theme, unit.Sp(24), "0")
+			textLabel := material.Label(
+				theme, unit.Sp(24),
+				strconv.FormatInt(int64(counter.value), 10),
+			)
 			textLabel.Alignment = text.Middle
 			return textLabel.Layout(context)
 		}),
 		layout.Rigid(func(context layout.Context) layout.Dimensions {
 			return layout.Flex{
-				Axis: layout.Vertical,
+				Axis:      layout.Vertical,
 				Alignment: layout.Middle,
 			}.Layout(context,
 				layout.Rigid(func(context layout.Context) layout.Dimensions {

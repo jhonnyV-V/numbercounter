@@ -13,10 +13,6 @@ github.com/go-text/typesetting-utils v0.0.0-20241103174707-87a29e9e6066 h1:qCuYC
 github.com/go-text/typesetting-utils v0.0.0-20241103174707-87a29e9e6066/go.mod h1:DDxDdQEnB70R8owOx3LVpEFvpMK9eeH1o2r0yZhFI9o=
 github.com/godbus/dbus/v5 v5.0.6 h1:mkgN1ofwASrYnJ5W6U/BxG15eXXXjirgZc7CLqkcaro=
 github.com/godbus/dbus/v5 v5.0.6/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
-github.com/jhonnyV-V/gio-x v0.0.0-20250913041602-1458ff9fa535 h1:gBtFua8eGGEhv9MH7nbQdtAX5lm/YLrdxwwN2U1O+60=
-github.com/jhonnyV-V/gio-x v0.0.0-20250913041602-1458ff9fa535/go.mod h1:/8Ig/rzxiybwLHndlIuzxY9wkdpgTuEXexJQJQCNz2g=
-github.com/jhonnyV-V/gio-x v0.0.0-20250920025134-b730d3c6cb79 h1:M+mGMb84o1WqJFtT+ugYhtOuXnufydEa2KaSUJEfUKw=
-github.com/jhonnyV-V/gio-x v0.0.0-20250920025134-b730d3c6cb79/go.mod h1:/8Ig/rzxiybwLHndlIuzxY9wkdpgTuEXexJQJQCNz2g=
 github.com/jhonnyV-V/gio-x v0.0.0-20250920032708-c3cddcbc6f34 h1:dCnBdViy9HYvm9RHEKQP5yhmqSVZIdKnFF7kMxHi3d4=
 github.com/jhonnyV-V/gio-x v0.0.0-20250920032708-c3cddcbc6f34/go.mod h1:/8Ig/rzxiybwLHndlIuzxY9wkdpgTuEXexJQJQCNz2g=
 golang.org/x/exp v0.0.0-20240707233637-46b078467d37 h1:uLDX+AfeFCct3a2C7uIWBKMJIR3CJMhcgfrUAqjRK6w=
