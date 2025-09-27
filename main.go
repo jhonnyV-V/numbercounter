@@ -311,40 +311,47 @@ func getCounter(context layout.Context, index int, theme *material.Theme) layout
 	counter := counters[index]
 
 	return layout.Flex{
-		Axis:      layout.Horizontal,
+		Axis:      layout.Vertical,
 		Alignment: layout.Middle,
 	}.Layout(context,
 		layout.Rigid(func(context layout.Context) layout.Dimensions {
-			textLabel := material.Label(
-				theme, unit.Sp(40),
-				printFileName(*counter.fileName),
+			return layout.Flex{
+				Axis:      layout.Horizontal,
+				Alignment: layout.Middle,
+			}.Layout(context,
+				layout.Rigid(func(context layout.Context) layout.Dimensions {
+					textLabel := material.Label(
+						theme, unit.Sp(40),
+						printFileName(*counter.fileName),
+					)
+					textLabel.Alignment = text.Middle
+					return textLabel.Layout(context)
+				}),
+				layout.Rigid(func(context layout.Context) layout.Dimensions {
+					labelText := strconv.FormatInt(int64(counter.value), 10)
+					if counter.value < 10 && counter.value > -1 {
+						labelText = "0" + labelText
+					}
+					textLabel := material.Label(
+						theme, unit.Sp(35), labelText,
+					)
+					textLabel.Alignment = text.End
+					return textLabel.Layout(context)
+				}),
 			)
-			textLabel.Alignment = text.Middle
-			return textLabel.Layout(context)
 		}),
-		layout.Rigid(func(context layout.Context) layout.Dimensions {
-			labelText := strconv.FormatInt(int64(counter.value), 10)
-			if counter.value < 10 && counter.value > -1 {
-				labelText = "0" + labelText
-			}
-			textLabel := material.Label(
-				theme, unit.Sp(35), labelText,
-			)
-			textLabel.Alignment = text.End
-			return textLabel.Layout(context)
-		}),
+
 		layout.Rigid(func(context layout.Context) layout.Dimensions {
 			buttonsMargin := layout.Inset{
-				Bottom: unit.Dp(10),
-				Left:   unit.Dp(15),
+				Left: unit.Dp(10),
 			}
 			return layout.Flex{
-				Axis:      layout.Vertical,
+				Axis:      layout.Horizontal,
 				Alignment: layout.Middle,
 			}.Layout(context,
 				layout.Rigid(func(context layout.Context) layout.Dimensions {
 					button := material.Button(theme, counter.incrementButton, "+")
-					return buttonsMargin.Layout(context, button.Layout)
+					return button.Layout(context)
 				}),
 				layout.Rigid(func(context layout.Context) layout.Dimensions {
 					button := material.Button(theme, counter.decrementButton, "-")
