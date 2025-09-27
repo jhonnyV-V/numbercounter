@@ -234,12 +234,19 @@ func loop(window *app.Window) error {
 							)
 
 							label.WrapPolicy = text.WrapHeuristically
+							textMargin := layout.Inset{
+								Top: unit.Dp(unit.Sp(6)),
+							}
 
 							return layout.Flex{
 								Axis: layout.Horizontal,
 							}.Layout(context,
 								layout.Rigid(button.Layout),
-								layout.Rigid(label.Layout),
+								layout.Rigid(
+									func(context layout.Context) layout.Dimensions {
+										return textMargin.Layout(context, label.Layout)
+									},
+								),
 							)
 						}),
 						layout.Rigid(layout.Spacer{Height: unit.Dp(30)}.Layout),
@@ -290,17 +297,21 @@ func getCounter(context layout.Context, index int, theme *material.Theme) layout
 			return textLabel.Layout(context)
 		}),
 		layout.Rigid(func(context layout.Context) layout.Dimensions {
+			buttonsMargin := layout.Inset{
+				Bottom: unit.Dp(10),
+				Left:   unit.Dp(15),
+			}
 			return layout.Flex{
 				Axis:      layout.Vertical,
 				Alignment: layout.Middle,
 			}.Layout(context,
 				layout.Rigid(func(context layout.Context) layout.Dimensions {
 					button := material.Button(theme, counter.incrementButton, "+")
-					return button.Layout(context)
+					return buttonsMargin.Layout(context, button.Layout)
 				}),
 				layout.Rigid(func(context layout.Context) layout.Dimensions {
 					button := material.Button(theme, counter.decrementButton, "-")
-					return button.Layout(context)
+					return buttonsMargin.Layout(context, button.Layout)
 				}),
 			)
 		}),
