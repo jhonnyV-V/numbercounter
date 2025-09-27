@@ -158,6 +158,7 @@ func loop(window *app.Window) error {
 	var list layout.List
 	var createCounterButton widget.Clickable
 	var selectFolderButton widget.Clickable
+	var reloadCountersButton widget.Clickable
 
 	for {
 		event := window.Event()
@@ -228,6 +229,10 @@ func loop(window *app.Window) error {
 				}
 			}
 
+			if reloadCountersButton.Clicked(context) {
+				readFolderForCounters()
+			}
+
 			layoutMargin.Layout(context,
 				func(context layout.Context) layout.Dimensions {
 					return layout.Flex{
@@ -262,6 +267,13 @@ func loop(window *app.Window) error {
 									},
 								),
 							)
+						}),
+						layout.Rigid(func(context layout.Context) layout.Dimensions {
+							if folderPath == "" {
+								return layout.Spacer{}.Layout(context)
+							}
+							button := material.Button(theme, &reloadCountersButton, "Reload counters")
+							return button.Layout(context)
 						}),
 						layout.Rigid(layout.Spacer{Height: unit.Dp(30)}.Layout),
 						layout.Rigid(func(context layout.Context) layout.Dimensions {
