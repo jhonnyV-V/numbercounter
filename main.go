@@ -75,10 +75,8 @@ func (counter *Counter) decrement() error {
 }
 
 var (
-	//TODO: find a way to "cache" the last folder
-	//TODO: remove this default value
 	folderPath string = ""
-	files      []string
+	didReadFromCache = false
 	counters   []*Counter
 )
 
@@ -94,28 +92,98 @@ func main() {
 	app.Main()
 }
 
+func fileExist(path string) bool {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			//ignore case
+			return false
+		} else {
+			fmt.Printf("failed to get file %s: %s\n", path, err)
+			return false
+		}
+	}
+	return true
+}
+
+func getConfigPath() string {
+	userConfigPath, err := os.UserConfigDir()
+	if err != nil {
+		fmt.Printf("failed to get config dir: %s\n", err)
+		os.Exit(2)
+	}
+
+	return userConfigPath + "/numbercounter"
+}
+
+func getOrCreateConfigDir() string {
+	configPath := getConfigPath()
+	_, err := os.Stat(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = os.Mkdir(configPath, 0766)
+			if err != nil {
+				fmt.Printf("failed to create config dir: %s\n", err)
+				os.Exit(3)
+			}
+		} else {
+			fmt.Printf("failed to get config dir: %s\n", err)
+			os.Exit(4)
+		}
+	}
+
+	return configPath
+}
+
+func writeToCache(configPath, folderPath string) {
+	cachePath := fmt.Sprintf(
+		"%s/cache",
+		configPath,
+	)
+
+	err := os.WriteFile(cachePath, []byte(folderPath), 0766)
+	if err != nil {
+		fmt.Printf("Failed to write to cache: %s\n", err)
+		return
+	}
+}
+
+func readFromCache(configPath string) error {
+	cachePath := fmt.Sprintf(
+		"%s/cache",
+		configPath,
+	)
+
+	if !fileExist(cachePath) {
+		return nil
+	}
+
+	file, err := os.ReadFile(cachePath)
+	if err != nil {
+		fmt.Printf("failed to read from cache %v\n", err)
+		return fmt.Errorf("Failed to read cache: %w", err)
+	}
+
+	folderPath = string(file)
+	readFolderForCounters()
+
+	return nil
+}
+
 func readFolderForCounters() {
 	listOfFiles, err := os.ReadDir(folderPath)
 	if err != nil {
 		fmt.Printf("listOfFiles ERR %#v\n", err.Error())
 	}
-	fmt.Printf("listOfFiles %#v\n", listOfFiles)
 	counters = []*Counter{}
 	for _, v := range listOfFiles {
 		if v.IsDir() {
 			continue
 		}
 		name := v.Name()
-		fmt.Printf("name %s\n", name)
-
 		splitName := strings.Split(name, ".")
-		fmt.Printf("splitName %#v\n", splitName)
-
 		extension := mime.TypeByExtension("." + splitName[len(splitName)-1])
-		fmt.Printf("extension %s\n", extension)
-
 		if !strings.Contains(extension, "text/") {
-			fmt.Printf("does not contain text/\n")
 			continue
 		}
 
@@ -126,7 +194,7 @@ func readFolderForCounters() {
 		}
 		value, err := strconv.Atoi(strings.TrimSpace(string(data)))
 		if err != nil {
-			fmt.Printf("failed to read value %s %#v\n", string(data), err)
+			fmt.Printf("failed to read from: %s, value: %s, err: %#v\n", folderPath + "/" + name, string(data), err)
 		}
 
 		counters = append(counters, &Counter{
@@ -188,12 +256,14 @@ func loop(window *app.Window) error {
 				} else {
 					folderPath = selectedFolder
 					readFolderForCounters()
+					cachePath := getOrCreateConfigDir()
+					writeToCache(cachePath, folderPath)
 				}
 			}
 
 			if createCounterButton.Clicked(context) && folderPath != "" {
 				ex := explorer.NewExplorer(window)
-				//modify to take the folderPath as a default directory
+				//TODO:modify to take the folderPath as a default directory
 				//also return filename or path
 				w, err := ex.CreateFile("counter.txt")
 				if err != nil {
@@ -231,6 +301,15 @@ func loop(window *app.Window) error {
 
 			if reloadCountersButton.Clicked(context) {
 				readFolderForCounters()
+			}
+
+			if folderPath == "" && !didReadFromCache {
+				cachePath := getOrCreateConfigDir()
+				didReadFromCache = true
+				err := readFromCache(cachePath)
+				if err != nil {
+					fmt.Printf("Failed to read cache %s\n", err)
+				}
 			}
 
 			layoutMargin.Layout(context,
