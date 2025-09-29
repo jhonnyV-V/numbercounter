@@ -84,6 +84,7 @@ func main() {
 	go func() {
 		w := new(app.Window)
 		w.Option(app.Size(unit.Dp(800), unit.Dp(700)))
+		app.Title("Counter")
 		if err := loop(w); err != nil {
 			log.Fatal(err)
 		}
@@ -107,7 +108,7 @@ func fileExist(path string) bool {
 }
 
 func getConfigPath() string {
-	userConfigPath, err := os.UserConfigDir()
+	userConfigPath, err := app.DataDir()
 	if err != nil {
 		fmt.Printf("failed to get config dir: %s\n", err)
 		os.Exit(2)
@@ -327,7 +328,7 @@ func loop(window *app.Window) error {
 							label := material.Label(
 								theme,
 								unit.Sp(20),
-								fmt.Sprintf("Current Directory: %s", folderPath),
+								fmt.Sprintf("Current: %s", folderPath),
 							)
 
 							label.WrapPolicy = text.WrapHeuristically
@@ -352,7 +353,9 @@ func loop(window *app.Window) error {
 								return layout.Spacer{}.Layout(context)
 							}
 							button := material.Button(theme, &reloadCountersButton, "Reload counters")
-							return button.Layout(context)
+							return layout.Inset{
+								Top: unit.Dp(20),
+							}.Layout(context, button.Layout)
 						}),
 						layout.Rigid(layout.Spacer{Height: unit.Dp(30)}.Layout),
 						layout.Rigid(func(context layout.Context) layout.Dimensions {
