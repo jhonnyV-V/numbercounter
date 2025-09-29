@@ -3,10 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
-	"mime"
 	"os"
 	"strconv"
-	"strings"
 
 	"gioui.org/app"
 	"gioui.org/font/gofont"
@@ -18,61 +16,6 @@ import (
 	"gioui.org/widget/material"
 	"github.com/jhonnyV-V/gio-x/explorer"
 )
-
-type Counter struct {
-	value           int
-	fileName        *string
-	incrementButton *widget.Clickable
-	decrementButton *widget.Clickable
-}
-
-func (counter *Counter) increment() error {
-	data := []byte(strconv.FormatInt(int64(counter.value+1), 10))
-	name := fmt.Sprintf("%s/%s", folderPath, *counter.fileName)
-
-	w, err := os.OpenFile(name, os.O_RDWR, 0644)
-	if err != nil {
-		return fmt.Errorf("(counter.increment) Failed open file %s: %w", name, err)
-	}
-
-	_, err = w.Write(data)
-	if err != nil {
-		return fmt.Errorf("(counter.increment) Failed write file %s: %w", name, err)
-	}
-
-	err = w.Close()
-	if err != nil {
-		return fmt.Errorf("(counter.increment) Failed close file %s: %w", name, err)
-	}
-
-	counter.value += 1
-
-	return nil
-}
-
-func (counter *Counter) decrement() error {
-	data := []byte(strconv.FormatInt(int64(counter.value-1), 10))
-	name := fmt.Sprintf("%s/%s", folderPath, *counter.fileName)
-
-	w, err := os.OpenFile(name, os.O_RDWR, 0644)
-	if err != nil {
-		return fmt.Errorf("(counter.decrement) Failed open file %s: %w", name, err)
-	}
-
-	_, err = w.Write(data)
-	if err != nil {
-		return fmt.Errorf("(counter.decrement) Failed write file %s: %w", name, err)
-	}
-
-	err = w.Close()
-	if err != nil {
-		return fmt.Errorf("(counter.decrement) Failed close file %s: %w", name, err)
-	}
-
-	counter.value -= 1
-
-	return nil
-}
 
 var (
 	folderPath string = ""
@@ -91,133 +34,6 @@ func main() {
 		os.Exit(0)
 	}()
 	app.Main()
-}
-
-func fileExist(path string) bool {
-	_, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			//ignore case
-			return false
-		} else {
-			fmt.Printf("failed to get file %s: %s\n", path, err)
-			return false
-		}
-	}
-	return true
-}
-
-func getConfigPath() string {
-	userConfigPath, err := app.DataDir()
-	if err != nil {
-		fmt.Printf("failed to get config dir: %s\n", err)
-		os.Exit(2)
-	}
-
-	return userConfigPath + "/numbercounter"
-}
-
-func getOrCreateConfigDir() string {
-	configPath := getConfigPath()
-	_, err := os.Stat(configPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			err = os.Mkdir(configPath, 0766)
-			if err != nil {
-				fmt.Printf("failed to create config dir: %s\n", err)
-				os.Exit(3)
-			}
-		} else {
-			fmt.Printf("failed to get config dir: %s\n", err)
-			os.Exit(4)
-		}
-	}
-
-	return configPath
-}
-
-func writeToCache(configPath, folderPath string) {
-	cachePath := fmt.Sprintf(
-		"%s/cache",
-		configPath,
-	)
-
-	err := os.WriteFile(cachePath, []byte(folderPath), 0766)
-	if err != nil {
-		fmt.Printf("Failed to write to cache: %s\n", err)
-		return
-	}
-}
-
-func readFromCache(configPath string) error {
-	cachePath := fmt.Sprintf(
-		"%s/cache",
-		configPath,
-	)
-
-	if !fileExist(cachePath) {
-		return nil
-	}
-
-	file, err := os.ReadFile(cachePath)
-	if err != nil {
-		fmt.Printf("failed to read from cache %v\n", err)
-		return fmt.Errorf("Failed to read cache: %w", err)
-	}
-
-	folderPath = string(file)
-	readFolderForCounters()
-
-	return nil
-}
-
-func readFolderForCounters() {
-	listOfFiles, err := os.ReadDir(folderPath)
-	if err != nil {
-		fmt.Printf("listOfFiles ERR %#v\n", err.Error())
-	}
-	counters = []*Counter{}
-	for _, v := range listOfFiles {
-		if v.IsDir() {
-			continue
-		}
-		name := v.Name()
-		splitName := strings.Split(name, ".")
-		extension := mime.TypeByExtension("." + splitName[len(splitName)-1])
-		if !strings.Contains(extension, "text/") {
-			continue
-		}
-
-		data, err := os.ReadFile(fmt.Sprintf("%s/%s", folderPath, name))
-
-		if err != nil {
-			fmt.Printf("failed to read file %s %#v\n", name, err)
-		}
-		value, err := strconv.Atoi(strings.TrimSpace(string(data)))
-		if err != nil {
-			fmt.Printf("failed to read from: %s, value: %s, err: %#v\n", folderPath + "/" + name, string(data), err)
-		}
-
-		counters = append(counters, &Counter{
-			value:           value,
-			fileName:        &name,
-			incrementButton: new(widget.Clickable),
-			decrementButton: new(widget.Clickable),
-		})
-	}
-}
-
-func printFileName(filename string) string {
-	return fmt.Sprintf(
-		"%s: ",
-		strings.Replace(
-			strings.ReplaceAll(filename, "_", " "),
-			".txt",
-			"",
-			1,
-		),
-	)
-
 }
 
 func loop(window *app.Window) error {
@@ -319,6 +135,8 @@ func loop(window *app.Window) error {
 						Axis:      layout.Vertical,
 						Alignment: layout.Middle,
 					}.Layout(context,
+
+						//NOTE: Select Folder 
 						layout.Rigid(func(context layout.Context) layout.Dimensions {
 							button := material.Button(theme, &selectFolderButton, "Select a folder")
 							if folderPath == "" {
@@ -348,6 +166,8 @@ func loop(window *app.Window) error {
 								),
 							)
 						}),
+
+						//NOTE: Reload Button
 						layout.Rigid(func(context layout.Context) layout.Dimensions {
 							if folderPath == "" {
 								return layout.Spacer{}.Layout(context)
@@ -357,7 +177,10 @@ func loop(window *app.Window) error {
 								Top: unit.Dp(20),
 							}.Layout(context, button.Layout)
 						}),
+
 						layout.Rigid(layout.Spacer{Height: unit.Dp(30)}.Layout),
+
+						//NOTE: Create Button
 						layout.Rigid(func(context layout.Context) layout.Dimensions {
 							if folderPath == "" {
 								return layout.Spacer{}.Layout(context)
@@ -366,7 +189,10 @@ func loop(window *app.Window) error {
 
 							return button.Layout(context)
 						}),
+
 						layout.Rigid(layout.Spacer{Height: unit.Dp(30)}.Layout),
+
+						//NOTE: Counter List
 						layout.Rigid(func(context layout.Context) layout.Dimensions {
 							return list.Layout(context, len(counters), func(context layout.Context, index int) layout.Dimensions {
 								ymargin := unit.Dp(15)
@@ -396,6 +222,7 @@ func getCounter(context layout.Context, index int, theme *material.Theme) layout
 		Axis:      layout.Vertical,
 		Alignment: layout.Middle,
 	}.Layout(context,
+		//NOTE: Labels
 		layout.Rigid(func(context layout.Context) layout.Dimensions {
 			return layout.Flex{
 				Axis:      layout.Horizontal,
@@ -423,6 +250,7 @@ func getCounter(context layout.Context, index int, theme *material.Theme) layout
 			)
 		}),
 
+		//NOTE: Buttons
 		layout.Rigid(func(context layout.Context) layout.Dimensions {
 			buttonsMargin := layout.Inset{
 				Left: unit.Dp(10),
