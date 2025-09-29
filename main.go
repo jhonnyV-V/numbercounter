@@ -52,8 +52,8 @@ func loop(window *app.Window) error {
 			return eventType.Err
 		case app.FrameEvent:
 			context := app.NewContext(&ops, eventType)
-			xmargin := unit.Dp(context.Constraints.Max.X) / 5
-			ymargin := unit.Dp(context.Constraints.Max.Y) / 10
+			xmargin := unit.Dp(context.Constraints.Max.X) / 10
+			ymargin := unit.Dp(context.Constraints.Max.Y) / 20
 			list = layout.List{
 				Axis: layout.Vertical,
 			}
