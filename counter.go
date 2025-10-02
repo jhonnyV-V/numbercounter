@@ -9,10 +9,10 @@ import (
 )
 
 type Counter struct {
-	value           int
 	fileName        *string
 	incrementButton *widget.Clickable
 	decrementButton *widget.Clickable
+	value           int
 }
 
 func (counter *Counter) increment() error {
